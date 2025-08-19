@@ -86,9 +86,9 @@ else:
         folium.CircleMarker(
             location=[row['lat'], row['lon']],
             radius=6,
-            color='#c81e00',
+            color="#00c83f" if row['Installation_Status'] == 'Installed' else "#d51e1e",
             fill=True,
-            fill_color='#c81e00',
+            fill_color='#00c83f' if row['Installation_Status'] == 'Installed' else '#d51e1e',
             fill_opacity=0.7,
             popup=folium.Popup(popup_html, max_width=300)
         ).add_to(m)
