@@ -71,7 +71,7 @@ else:
     center_lat, center_lon = filtered_data[["lat", "lon"]].mean()
 
     m = folium.Map(location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap", height="1000px")
-    marker_cluster = MarkerCluster().add_to(m)
+    # marker_cluster = MarkerCluster().add_to(m)
 
     # Add points
     for _, row in filtered_data.iterrows():
@@ -91,22 +91,10 @@ else:
             fill_color='#c81e00',
             fill_opacity=0.7,
             popup=folium.Popup(popup_html, max_width=300)
-        ).add_to(marker_cluster)
+        ).add_to(m)
 
     # Fit map to bounds of points if there are at least 2 points
     if len(filtered_data) > 1:
         m.fit_bounds(filtered_data[["lat", "lon"]].values.tolist())
 
     st_data = st_folium(m, width=700, height=1000, key="map", returned_objects=[])
-
-
-
-# # # Add widget to select a point
-# # point_select = st.sidebar.selectbox("Select a Point", options=filtered_data["ROAD_NAME"].unique())
-# # if point_select:
-# #     filtered_data = filtered_data[filtered_data["ROAD_NAME"] == point_select]
-# #     lat, lon = filtered_data["lat"].values[0], filtered_data["lon"].values[0]
-# #     print(lat)
-# #     print(lon)
-# #     street_view_url = f"https://www.google.com/maps/embed/v1/streetview?location={lat},{lon}&key={api_key}&heading=210&pitch=10&fov=80"
-# #     st.components.v1.iframe(street_view_url, width=700, height=500)
