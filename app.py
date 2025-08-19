@@ -1,5 +1,5 @@
 import pandas as pd
-import pydeck as pdk
+import folium
 import streamlit as st
 import math
 import os
@@ -23,6 +23,8 @@ filtered_data.rename(columns={
     "Installation Status": "Installation_Status"
 }, inplace=True)
 
+# Turn LGA FAGE to F
+filtered_data['LGA'] = filtered_data['LGA'].str.replace("FAGE", "FAGGE", regex=False)
 
 # Setup Streamlit
 st.title("Kano Signage Dashboard")
@@ -31,8 +33,13 @@ st.write("Showing all points on the map. Hover over a point to see details.")
 st.sidebar.header("Filter Options")
 
 # Filter by Lat and Long
-lat_range = st.sidebar.slider("Latitude", min_value=-90.0, max_value=90.0, value=(-10.0, 10.0))
-lon_range = st.sidebar.slider("Longitude", min_value=-180.0, max_value=180.0, value=(8.0, 15.0))
+# Set default lat/lon range to cover all data
+lat_min, lat_max = float(filtered_data["lat"].min()), float(filtered_data["lat"].max())
+lon_min, lon_max = float(filtered_data["lon"].min()), float(filtered_data["lon"].max())
+
+lat_range = st.sidebar.slider("Latitude", min_value=-90.0, max_value=90.0, value=(lat_min, lat_max))
+lon_range = st.sidebar.slider("Longitude", min_value=-180.0, max_value=180.0, value=(lon_min, lon_max))
+
 filtered_data = filtered_data[
     (filtered_data["lat"] >= lat_range[0]) & (filtered_data["lat"] <= lat_range[1]) &
     (filtered_data["lon"] >= lon_range[0]) & (filtered_data["lon"] <= lon_range[1])
@@ -59,43 +66,37 @@ if installation_status_filter:
 #     st.components.v1.iframe(street_view_url, width=700, height=500)
 
 
-# Define PyDeck Layer
-scatter_layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=filtered_data,
-    get_position=["lon", "lat"],
-    get_color=[200, 30, 0, 100],
-    get_radius=56,
-    pickable=True,
-)
+# Installation Summary
+st.sidebar.subheader("Installation Summary")
+st.sidebar.write(f"Total Points: {filtered_data.shape[0]}")
+st.sidebar.write(f"Total Installed: {filtered_data[filtered_data['Installation_Status'] == 'Installed'].shape[0]}")
+st.sidebar.write(f"Total Pending: {filtered_data[filtered_data['Installation_Status'] == 'Pending'].shape[0]}")
 
-tooltip = {
-    "html": "<b>Road Name:</b> {ROAD_NAME}<br>"
-    "<b>LGA:</b> {LGA}<br>"
-    "<b>Lat:</b> {lat}<br>"
-    "<b>long:</b> {lon}<br>"
-    "<b>Print Count:</b> {PRINT_COUNT}<br> "
-    "<b>Installation Status:</b> {Installation_Status}",
-    "style": {
-        "color": "white",
-        "backgroundColor": "rgba(0, 0, 0, 0.7)",
-        "padding": "10px",
-        "borderRadius": "5px"
-    }
-}
+# Create Folium map centered on mean lat/lon
+center_lat = filtered_data["lat"].mean()
+center_lon = filtered_data["lon"].mean()
+m = folium.Map(location=[center_lat, center_lon], zoom_start=11, height="1000px")
 
-view_state = pdk.ViewState(
-    latitude=filtered_data["lat"].mean(),
-    longitude=filtered_data["lon"].mean(),
-    zoom=11,
-    pitch=0
-)
+# Add points to the map
+for _, row in filtered_data.iterrows():
+    popup_html = f"""
+    <b>Road Name:</b> {row['ROAD_NAME']}<br>
+    <b>LGA:</b> {row['LGA']}<br>
+    <b>Lat:</b> {row['lat']}<br>
+    <b>Long:</b> {row['lon']}<br>
+    <b>Print Count:</b> {row['PRINT_COUNT']}<br>
+    <b>Installation Status:</b> {row['Installation_Status']}
+    """
+    folium.CircleMarker(
+        location=[row['lat'], row['lon']],
+        radius=6,
+        color='#c81e00',
+        fill=True,
+        fill_color='#c81e00',
+        fill_opacity=0.7,
+        popup=folium.Popup(popup_html, max_width=300)
+    ).add_to(m)
 
-r = pdk.Deck(
-    layers=[scatter_layer],
-    initial_view_state=view_state,
-    tooltip=tooltip,
-    width="100%"
-)
-
-st.pydeck_chart(r)
+# Display Folium map in Streamlit
+from streamlit_folium import st_folium
+st_folium(m, width=700, height=1000)

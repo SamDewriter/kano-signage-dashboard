@@ -3,3 +3,5 @@ pandas
 pydeck
 python-dotenv
 openpyxl
+folium
+streamlit-folium
