@@ -15,6 +15,17 @@ import json
 def fetch_updated_data():
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
+    client_config = {
+        "web": {
+            "client_id": st.secrets["web-google-drive"]["client_id"],
+            "project_id": st.secrets["web-google-drive"]["project_id"],
+            "auth_uri": st.secrets["web-google-drive"]["auth_uri"],
+            "token_uri": st.secrets["web-google-drive"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["web-google-drive"]["auth_provider_x509_cert_url"],
+            "client_secret": st.secrets["web-google-drive"]["client_secret"],
+        }
+    }
+
     creds = None
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
@@ -22,7 +33,7 @@ def fetch_updated_data():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_config(st.secrets["web-google-drive"], SCOPES)
+            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
             creds = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
@@ -93,3 +104,7 @@ def update_existing_data():
     final_df['Installation Points'] = final_df['Installation Points'].astype(int)
     final_df.rename(columns={'Installation Points': 'Installation_Points'}, inplace=True)
     final_df.to_csv('dashboard.csv', index=False)
+
+
+fetch_updated_data()
+update_existing_data()
