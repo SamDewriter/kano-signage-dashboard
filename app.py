@@ -142,11 +142,12 @@ st.subheader("🗺️ Map of Signage Points")
 if filtered_data.empty:
     st.warning("No data available for the selected filters.")
 else:
+    # Center map on mean lat/lon
     center_lat, center_lon = filtered_data[["lat", "lon"]].mean()
+
     m = folium.Map(location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap")
 
-    marker_cluster = MarkerCluster().add_to(m)
-
+    # Add points
     for _, row in filtered_data.iterrows():
         popup_html = f"""
         <b>Street Name:</b> {row['Streets']}<br>
@@ -164,8 +165,8 @@ else:
             fill=True,
             fill_color="#00c83f" if row["Installation_Status"] == "Installed" else "#d51e1e",
             fill_opacity=0.7,
-            popup=folium.Popup(popup_html, max_width=300),
-        ).add_to(marker_cluster)
+            popup=folium.Popup(popup_html, max_width=300)
+        ).add_to(m)
 
     if len(filtered_data) > 1:
         m.fit_bounds(filtered_data[["lat", "lon"]].values.tolist())
