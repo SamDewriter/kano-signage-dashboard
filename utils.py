@@ -35,7 +35,7 @@ def fetch_updated_data():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
@@ -105,3 +105,8 @@ def update_existing_data():
     final_df['Installation Points'] = final_df['Installation Points'].astype(int)
     final_df.rename(columns={'Installation Points': 'Installation_Points'}, inplace=True)
     final_df.to_csv('dashboard.csv', index=False)
+
+
+
+fetch_updated_data()
+update_existing_data()
