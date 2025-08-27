@@ -1,107 +1,116 @@
-import gdown
 import os
 import pandas as pd
-from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 import io
 from googleapiclient.http import MediaIoBaseDownload
-from google.auth.transport.requests import Request
 import streamlit as st
-import json
+import pandas as pd
+
+
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+
+
+def get_drive_service():
+    """Authenticate using service account and return Drive API client."""
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp-service-account"], 
+        scopes=SCOPES
+    )
+    return build("drive", "v3", credentials=creds)
 
 
 def fetch_updated_data():
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-
-    client_config = {
-        "installed": {
-            "client_id": st.secrets["google-drive"]["client_id"],
-            "project_id": st.secrets["google-drive"]["project_id"],
-            "auth_uri": st.secrets["google-drive"]["auth_uri"],
-            "token_uri": st.secrets["google-drive"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["google-drive"]["auth_provider_x509_cert_url"],
-            "client_secret": st.secrets["google-drive"]["client_secret"],
-            "redirect_uris": st.secrets["google-drive"]["redirect_uris"],
-        }
-    }
-
-    creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-            creds = flow.run_console()
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    drive_service = build('drive', 'v3', credentials=creds)
-
-    file_id = st.secrets["google-drive"]["file_id"]
-    file_name = 'latest_installation_data.xlsx'
-    folder_name = 'downloads'
+    """Download the latest Excel file from Google Drive."""
+    drive_service = get_drive_service()
+    file_id = st.secrets["gcp-service-account"]["file_id"]
+    file_name = "latest_installation_data.xlsx"
+    folder_name = "downloads"
     os.makedirs(folder_name, exist_ok=True)
     file_path = os.path.join(folder_name, file_name)
 
     request = drive_service.files().export_media(
         fileId=file_id,
-        mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    fh = io.FileIO(file_path, 'wb')
+    fh = io.FileIO(file_path, "wb")
     downloader = MediaIoBaseDownload(fh, request)
+
     done = False
     while not done:
         status, done = downloader.next_chunk()
-        print(f"Download {int(status.progress() * 100)}%.")
+        if status:
+            print(f"Download {int(status.progress() * 100)}%.")
     print(f"Downloaded to {file_path}")
+    return file_path
 
 
+def load_latest_data(filepath: str, sheet_name: str = "Copy of Responses") -> pd.DataFrame:
+    """Load the latest installation data and clean headers/columns."""
+    df = pd.read_excel(filepath, sheet_name=sheet_name)
 
-def update_existing_data():
-    d_filepath = 'downloads/latest_installation_data.xlsx'
-    df = pd.read_excel(d_filepath, sheet_name=  "Copy of Responses")
-
-    # Make the first row the column headers
+    # Set first row as header, drop it from data
     df.columns = df.iloc[0]
     df = df[1:]
 
-    # Select columns
-    df = df[['Streets', 'LATITUDE', 'LONGITUDE', 'Installation Points']]
+    # Keep relevant columns only
+    return df[['Streets', 'LATITUDE', 'LONGITUDE', 'Installation Points']]
 
 
-    grouped_df = df.groupby('Streets').agg({
-        "LATITUDE": "mean",
-        "LONGITUDE": "mean",
-        "Installation Points": "count"
-    }).reset_index()
+def aggregate_installation_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate installation points by street with mean coordinates."""
+    grouped = (
+        df.groupby('Streets')
+          .agg({
+              "LATITUDE": "mean",
+              "LONGITUDE": "mean",
+              "Installation Points": "count"
+          })
+          .reset_index()
+          .rename(columns={
+              "LATITUDE": "Mean Latitude",
+              "LONGITUDE": "Mean Longitude"
+          })
+    )
+    return grouped
 
 
-    grouped_df = grouped_df.rename(columns={
-        "LATITUDE": "Mean Latitude",
-        "LONGITUDE": "Mean Longitude",
-    })
+def merge_with_old_data(new_data: pd.DataFrame, old_data_path: str) -> pd.DataFrame:
+    """Merge new aggregated data with old harmonized cluster data."""
+    old_df = pd.read_csv(old_data_path)
 
-    old_df = pd.read_csv("Harmonized_Street_Cluster.csv")
+    merged = old_df.merge(new_data, on='Streets', how='left')
 
-    merged = old_df.merge(grouped_df, on='Streets', how='left')
+    # Fill coordinates with new ones if available
     merged['lat'] = merged['Mean Latitude'].combine_first(merged['lat'])
     merged['lon'] = merged['Mean Longitude'].combine_first(merged['lon'])
 
-
+    # Installation status
     merged['Installation_Status'] = merged.apply(
-        lambda row: 'Installed' if row['Streets'] in grouped_df['Streets'].values else 'Pending',
-        axis=1  
+        lambda row: 'Installed' if row['Streets'] in new_data['Streets'].values else 'Pending',
+        axis=1
     )
 
-    merged['Installation Points'] = merged['Installation Points'].fillna(0)
+    # Handle missing installation points
+    merged['Installation Points'] = merged['Installation Points'].fillna(0).astype(int)
 
-    final_df = merged[['Code', 'Streets', 'LGA', 'lat', 'lon', 'Print_Count', 'Installation_Status', 'Installation Points']]
+    return merged
 
 
-    final_df['Installation Points'] = final_df['Installation Points'].astype(int)
-    final_df.rename(columns={'Installation Points': 'Installation_Points'}, inplace=True)
-    final_df.to_csv('dashboard.csv', index=False)
+def save_dashboard(merged_df: pd.DataFrame, output_path: str = "dashboard.csv"):
+    """Save final dashboard-ready dataframe."""
+    final_df = merged_df[[
+        'Code', 'Streets', 'LGA', 'lat', 'lon', 'Print_Count',
+        'Installation_Status', 'Installation Points'
+    ]].rename(columns={'Installation Points': 'Installation_Points'})
+
+    final_df.to_csv(output_path, index=False)
+
+
+def update_existing_data():
+    """Pipeline to update harmonized cluster data and save dashboard."""
+    latest_df = load_latest_data('downloads/latest_installation_data.xlsx')
+    aggregated_df = aggregate_installation_data(latest_df)
+    merged_df = merge_with_old_data(aggregated_df, "Harmonized_Street_Cluster.csv")
+    save_dashboard(merged_df)
+    print("Dashboard data updated and saved to dashboard.csv")

@@ -2,7 +2,7 @@ import pandas as pd
 import folium
 import streamlit as st
 from streamlit_folium import st_folium
-from utils import fetch_updated_data, update_existing_data
+from utils import update_existing_data
 from folium.plugins import MarkerCluster
 import plotly.express as px
 
@@ -188,6 +188,5 @@ st.download_button(
 st.caption(f"Last updated: {pd.Timestamp.now().strftime('%d %b %Y %H:%M')}")
 
 if st.button("🔄 Refresh Data"):
-    fetch_updated_data()
     update_existing_data()
     df = load_data()
