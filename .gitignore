@@ -11,3 +11,4 @@ Harmonized Street Cluster.xlsx
 Harmonized_Street_Cluster.csv
 points_outside_kano.csv
 *__pycache__/
+.streamlit/
