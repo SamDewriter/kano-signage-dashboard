@@ -105,7 +105,3 @@ def update_existing_data():
     final_df['Installation Points'] = final_df['Installation Points'].astype(int)
     final_df.rename(columns={'Installation Points': 'Installation_Points'}, inplace=True)
     final_df.to_csv('dashboard.csv', index=False)
-
-
-fetch_updated_data()
-update_existing_data()
