@@ -16,13 +16,14 @@ def fetch_updated_data():
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
     client_config = {
-        "web": {
-            "client_id": st.secrets["web-google-drive"]["client_id"],
-            "project_id": st.secrets["web-google-drive"]["project_id"],
-            "auth_uri": st.secrets["web-google-drive"]["auth_uri"],
-            "token_uri": st.secrets["web-google-drive"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["web-google-drive"]["auth_provider_x509_cert_url"],
-            "client_secret": st.secrets["web-google-drive"]["client_secret"],
+        "installed": {
+            "client_id": st.secrets["google-drive"]["client_id"],
+            "project_id": st.secrets["google-drive"]["project_id"],
+            "auth_uri": st.secrets["google-drive"]["auth_uri"],
+            "token_uri": st.secrets["google-drive"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["google-drive"]["auth_provider_x509_cert_url"],
+            "client_secret": st.secrets["google-drive"]["client_secret"],
+            "redirect_uris": st.secrets["google-drive"]["redirect_uris"],
         }
     }
 
@@ -40,7 +41,7 @@ def fetch_updated_data():
 
     drive_service = build('drive', 'v3', credentials=creds)
 
-    file_id = st.secrets["web-google-drive"]["file_id"]
+    file_id = st.secrets["google-drive"]["file_id"]
     file_name = 'latest_installation_data.xlsx'
     folder_name = 'downloads'
     os.makedirs(folder_name, exist_ok=True)
