@@ -22,14 +22,14 @@ def fetch_updated_data():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_config(st.secrets["google-drive"], SCOPES)
+            flow = InstalledAppFlow.from_client_config(st.secrets["web-google-drive"], SCOPES)
             creds = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
     drive_service = build('drive', 'v3', credentials=creds)
 
-    file_id = st.secrets["google-drive"]["file_id"]
+    file_id = st.secrets["web-google-drive"]["file_id"]
     file_name = 'latest_installation_data.xlsx'
     folder_name = 'downloads'
     os.makedirs(folder_name, exist_ok=True)
@@ -93,6 +93,3 @@ def update_existing_data():
     final_df['Installation Points'] = final_df['Installation Points'].astype(int)
     final_df.rename(columns={'Installation Points': 'Installation_Points'}, inplace=True)
     final_df.to_csv('dashboard.csv', index=False)
-
-
-fetch_updated_data()
