@@ -5,3 +5,10 @@ python-dotenv
 openpyxl
 folium
 streamlit-folium
+gdown
+google-auth 
+google-auth-oauthlib 
+google-api-python-client
+shapely
+geopandas
+plotly

@@ -1,2 +1,13 @@
 env
 .env
+token.json
+credentials.json
+exp.ipynb
+unique_streets.csv
+high_installation_points.csv
+app2.py
+kano_boundary.html
+Harmonized Street Cluster.xlsx
+Harmonized_Street_Cluster.csv
+points_outside_kano.csv
+*__pycache__/
