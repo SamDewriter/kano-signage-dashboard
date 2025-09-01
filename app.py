@@ -28,7 +28,7 @@ df = load_data()
 # ----------------------------
 # Header
 # ----------------------------
-st.title("🗺️ Kano Signage Dashboard")
+st.title("🗺️ Kano Street Name Dashboard")
 st.caption("Interactive dashboard showing signage installation progress across Kano.")
 
 # ----------------------------
