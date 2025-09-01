@@ -160,7 +160,7 @@ else:
         """
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
-            radius=6,
+            radius=3,
             color="#00c83f" if row["Installation_Status"] == "Installed" else "#d51e1e",
             fill=True,
             fill_color="#00c83f" if row["Installation_Status"] == "Installed" else "#d51e1e",
